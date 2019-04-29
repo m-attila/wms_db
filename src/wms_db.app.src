@@ -1,0 +1,16 @@
+{application, wms_db,
+ [{description, "WMS database application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {wms_db_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    mnesia
+   ]},
+  {env,[]},
+  {modules, [wms_db_handler]},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
