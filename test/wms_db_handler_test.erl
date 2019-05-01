@@ -20,6 +20,6 @@ init_test() ->
   % node are not running
   ?assertMatch({error, {node_not_running, _}}, wms_db_handler:init(Node)).
 
-%% =============================================================================
-%% Private functions
-%% =============================================================================
+convert_test() ->
+  ?assertEqual(not_found, wms_db_handler:convert({ok, []})),
+  ?assertEqual(record, wms_db_handler:convert({ok, [record]})).

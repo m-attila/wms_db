@@ -16,17 +16,19 @@
          create_table/5,
          create_kv_table/3,
          read/2,
+         read/3,
          read_kv/2,
          write/2,
          write_kv/3,
          delete/2,
          transaction/1,
-         delete_table/1]).
+         delete_table/1, is_transaction/0, convert/1]).
 
 
 %% =============================================================================
 %% Private types
 %% =============================================================================
+
 -type db_result(Res) :: {'atomic', Res} | {'aborted', Reason :: term()}.
 -record(key_value_record, {
   key :: term(),
@@ -59,12 +61,12 @@
 -spec init([node()]) ->
   ok | {error, term()}.
 init(Nodes) ->
-  case  mnesia:change_config(extra_db_nodes, Nodes) of
+  case mnesia:change_config(extra_db_nodes, Nodes) of
     {ok, _} ->
       init_db();
     Other ->
       Other
-end.
+  end.
 
 
 -spec init_db() ->
@@ -213,9 +215,31 @@ delete_table(TableName) ->
 -spec read(atom(), term()) ->
   {ok, [term()]}.
 read(TableName, Key) ->
+  read(TableName, Key, read).
+
+%% @doc
+%%
+%%-------------------------------------------------------------------
+%%
+%% ### Function
+%% read/3
+%% ###### Purpose
+%% Reads any term from database for given locking mode
+%% ###### Arguments
+%% * TableName - name of table
+%% * Key - primary key of the record
+%% * LockingMode - read | write
+%% ###### Returns
+%%
+%%-------------------------------------------------------------------
+%%
+%% @end
+-spec read(atom(), term(), read | write) ->
+  {ok, [term()]}.
+read(TableName, Key, LockingMode) ->
   case mnesia:is_transaction() of
     true ->
-      {ok, mnesia:read(TableName, Key, read)};
+      {ok, mnesia:read(TableName, Key, LockingMode)};
     false ->
       {ok, mnesia:dirty_read(TableName, Key)}
   end.
@@ -318,17 +342,50 @@ delete(TableName, Key) ->
   mnesia:delete(TableName,
                 Key, write).
 
+%% @doc
+%%
+%%-------------------------------------------------------------------
+%%
+%% ### Function
+%% is_transaction/0
+%% ###### Purpose
+%% Returns if in database transaction.
+%% ###### Arguments
+%%
+%% ###### Returns
+%%
+%%-------------------------------------------------------------------
+%%
+%% @end
+-spec is_transaction() ->
+  boolean().
+is_transaction() ->
+  mnesia:is_transaction().
+
 %% -----------------------------------------------------------------------------
 %% Transaction
 %% -----------------------------------------------------------------------------
 
 -spec transaction(fun()) ->
-  {ok | error, term()}.
+  ok | {ok | error, term()}.
 transaction(TransactionFun) ->
-  unpack_mnesia_result(mnesia:transaction(TransactionFun)).
+  case mnesia:is_transaction() of
+    false ->
+      unpack_mnesia_result(mnesia:transaction(TransactionFun));
+    true ->
+      TransactionFun()
+  end.
+
+-spec convert({ok, [term()]}) ->
+  term().
+convert({ok, []}) ->
+  not_found;
+convert({ok, [R]}) ->
+  R.
+
 
 -spec unpack_mnesia_result({atomic, term()} | {aborted, term()}) ->
-  {ok | error, term()}.
+  ok | {ok | error, term()}.
 unpack_mnesia_result({atomic, ok}) ->
   ok;
 unpack_mnesia_result({atomic, Result}) ->

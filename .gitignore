@@ -20,3 +20,4 @@ checkrel_failures.txt
 check_upgrade_failures.txt
 rebar_debug.log
 mnesia/
+Mnesia*/
