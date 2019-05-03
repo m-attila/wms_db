@@ -8,5 +8,5 @@
   0},
  {<<"wms_dist">>,
   {git,"git@github.com:m-attila/wms_dist.git",
-       {ref,"b5c1c28d3d0e155d19f686acc8929223084cc276"}},
+       {ref,"8a84eae6b031757a792bb70a31a8e6b7bb0c235f"}},
   0}].

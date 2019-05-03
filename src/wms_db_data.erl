@@ -56,7 +56,7 @@ add_child_to_key(#{new_child := NewChildFun,
   ok = wms_db_handler:transaction(Transaction).
 
 -spec remove_child_from_key(data_instance()) ->
-  ok.
+  {ok, ParentRemoved :: boolean()}.
 remove_child_from_key(#{
                         read_record := ReadRecordFun,
                         get_children := GetChildrenFun,
@@ -79,14 +79,18 @@ remove_child_from_key(#{
 
       case NewChildren of
         PrevChildren ->
-          ok;
+          false;
         [] ->
-          DeleteRecordFun(Instance, SetChildrenFun(Instance, Record, NewChildren));
+          ok = DeleteRecordFun(Instance, SetChildrenFun(Instance,
+                                                        Record, NewChildren)),
+          true;
         _ ->
-          WriteRecordFun(Instance, SetChildrenFun(Instance, Record, NewChildren))
+          ok = WriteRecordFun(Instance, SetChildrenFun(Instance,
+                                                       Record, NewChildren)),
+          false
       end
     end,
-  ok = wms_db_handler:transaction(Transaction).
+  wms_db_handler:transaction(Transaction).
 
 -spec get_children_from_key(data_instance()) ->
   [term()].

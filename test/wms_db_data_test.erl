@@ -112,7 +112,7 @@ remove_child_from_key_test() ->
     fun() ->
       wms_db_data:remove_child_from_key(Instance)
     end,
-  ?assertEqual(ok, run_test(TestFun1)),
+  ?assertEqual({ok, false}, run_test(TestFun1)),
 
   % record found, but child does not exists
   Instance2 = Instance#{
@@ -133,7 +133,7 @@ remove_child_from_key_test() ->
     fun() ->
       wms_db_data:remove_child_from_key(Instance2)
     end,
-  ?assertEqual(ok, run_test(TestFun2)),
+  ?assertEqual({ok, false}, run_test(TestFun2)),
 
   % record found, child found, but children remains
   put(write_record_executed, false),
@@ -164,7 +164,7 @@ remove_child_from_key_test() ->
     fun() ->
       wms_db_data:remove_child_from_key(Instance3)
     end,
-  ?assertEqual(ok, run_test(TestFun3)),
+  ?assertEqual({ok, false}, run_test(TestFun3)),
   ?assert(get(write_record_executed)),
 
   % record found, child found, no children will be remain
@@ -200,7 +200,7 @@ remove_child_from_key_test() ->
     fun() ->
       wms_db_data:remove_child_from_key(Instance4)
     end,
-  ?assertEqual(ok, run_test(TestFun4)),
+  ?assertEqual({ok, true}, run_test(TestFun4)),
   ?assert(get(delete_record_executed)).
 
 get_children_from_key_test() ->

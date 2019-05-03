@@ -279,19 +279,19 @@ event_test(_Config) ->
   [] = wms_db_data_events:get_event(Ev2),
 
   % remove Ts1
-  ok = wms_db_data_events:remove_event(Ts1, Ev1),
+  {ok, false} = wms_db_data_events:remove_event(Ts1, Ev1),
   [Ts2] = wms_db_data_events:get_event(Ev1),
 
   % remove Ts3, what does not exists
-  ok = wms_db_data_events:remove_event(Ts3, Ev1),
+  {ok, false} = wms_db_data_events:remove_event(Ts3, Ev1),
   [Ts2] = wms_db_data_events:get_event(Ev1),
 
   % remove Ts2
-  ok = wms_db_data_events:remove_event(Ts2, Ev1),
+  {ok, true} = wms_db_data_events:remove_event(Ts2, Ev1),
   [] = wms_db_data_events:get_event(Ev1),
 
   % remove Ts2 again
-  ok = wms_db_data_events:remove_event(Ts2, Ev1),
+  {ok, false} = wms_db_data_events:remove_event(Ts2, Ev1),
   [] = wms_db_data_events:get_event(Ev1).
 
 %%--------------------------------------------------------------------
@@ -354,13 +354,13 @@ subscriber_test(_Config) ->
   ?assertEqual(Expected2, Result2),
 
   % remove subscriber 1
-  ok = wms_db_data_events:remove_subscriber(TsBSub1, Ev, Task1),
+  {ok, false} = wms_db_data_events:remove_subscriber(TsBSub1, Ev, Task1),
   Result3 = wms_db_data_events:get_subscribers(TsEvent, Ev),
   Expected3 = [{TsBSub2, Ev, Task2}],
   ?assertEqual(Expected3, Result3),
 
   % remove subscriber 2
-  ok = wms_db_data_events:remove_subscriber(TsBSub2, Ev, Task2),
+  {ok, false} = wms_db_data_events:remove_subscriber(TsBSub2, Ev, Task2),
   Result4 = wms_db_data_events:get_subscribers(TsEvent, Ev),
   Expected4 = [],
   ?assertEqual(Expected4, Result4),
@@ -372,13 +372,13 @@ subscriber_test(_Config) ->
   Expected5 = [{TsASub3, Ev, Task3}],
   ?assertEqual(Expected5, Result5),
 
-  ok = wms_db_data_events:remove_subscriber(TsASub3, Ev, Task3),
+  {ok, true} = wms_db_data_events:remove_subscriber(TsASub3, Ev, Task3),
   Result6 = wms_db_data_events:get_subscribers(TsEventLater, Ev),
   Expected6 = [],
   ?assertEqual(Expected6, Result6),
 
   % delete event
-  ok = wms_db_data_events:remove_event(TsEvent, Ev),
+  {ok, true} = wms_db_data_events:remove_event(TsEvent, Ev),
   [] = wms_db_data_events:get_event(Ev),
 
   ok.

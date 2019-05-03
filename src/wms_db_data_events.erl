@@ -90,7 +90,7 @@ add_subscriber(Timestamp, EventID, TaskInstanceID) ->
 %% @end
 
 -spec remove_subscriber(timestamp(), binary(), binary()) ->
-  ok.
+  {ok, SubscribtionRemoved :: boolean()}.
 remove_subscriber(Timestamp, EventID, TaskInstanceID) ->
   Instance = wms_db_inst_subscribers:new(Timestamp,
                                          EventID,
@@ -164,7 +164,7 @@ add_event(Timestamp, EventID) ->
 %%
 %% @end
 -spec remove_event(timestamp(), binary()) ->
-  ok.
+  {ok, EventRemoved :: boolean()}.
 remove_event(Timestamp, EventID) ->
   Instance = wms_db_inst_events:new(Timestamp, EventID),
   wms_db_data:remove_child_from_key(Instance).

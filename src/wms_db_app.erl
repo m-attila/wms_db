@@ -20,7 +20,8 @@
   {ok, Pid :: pid()} |
   {error, Reason :: term()}.
 start(_StartType, []) ->
-  wms_db:load_config(wms_cfg:get(?APP_NAME, load_config, true)),
+  wms_dist:load_config(),
+  wms_db:load_config(),
   application:start(wms_dist),
   init(),
   {ok, _} = wms_db_sup:start_link().
