@@ -9,4 +9,19 @@
 -author("Attila Makra").
 
 -define(APP_NAME, wms_db).
+
+%% =============================================================================
+%% Types
+%% =============================================================================
+
 -type table_types() :: set | ordered_set | bag.
+
+-type global_state_variable() :: binary().
+-type global_state_value() :: term() | [term()].
+
+-type global_state_reference() :: {global, global_state_variable()}.
+-type global_state_operand() :: global_state_reference() | global_state_value().
+
+-type global_state_operator() ::
+fun((global_state_value(),  global_state_value())->
+  term()).

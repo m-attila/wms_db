@@ -29,7 +29,7 @@
 %% =============================================================================
 
 -spec create_table([node()]) ->
-  ok.
+  ok |{error, term()}.
 create_table(Nodes) ->
   wms_db_handler:create_table(
     ?EVENT_TABLE_NAME,

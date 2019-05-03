@@ -161,6 +161,13 @@ groups() ->
        event_test,
        subscriber_test
      ]
+    },
+    {state_group,
+     [{repeat_until_any_fail, 1}],
+     [
+       private_state_test,
+       global_state_test
+     ]
     }
   ].
 
@@ -180,7 +187,8 @@ groups() ->
 %%--------------------------------------------------------------------
 all() ->
   [
-    {group, events_group}
+    {group, events_group},
+    {group, state_group}
   ].
 
 %%--------------------------------------------------------------------
@@ -205,7 +213,7 @@ all() ->
 %%--------------------------------------------------------------------
 
 %% =============================================================================
-%% Table create group
+%% Events group
 %% =============================================================================
 
 events_group({prelude, Config}) ->
@@ -383,6 +391,115 @@ subscriber_test(_Config) ->
 
   ok.
 
+%% =============================================================================
+%% State group
+%% =============================================================================
+
+state_group({prelude, Config}) ->
+  {ok, StartedApps} = application:ensure_all_started(?APP_NAME),
+  ok = wms_test:start_application(?APP_NAME),
+  [{started, StartedApps} | Config];
+state_group({postlude, Config}) ->
+  delete_tables(),
+  StartedApps = ?config(started, Config),
+  [application:stop(App) || App <- StartedApps],
+  wms_test:stop_application(?APP_NAME).
+
+%%--------------------------------------------------------------------
+%% Private state tests
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+private_state_test({info, _Config}) ->
+  [""];
+private_state_test(suite) ->
+  ok;
+%% init test case
+private_state_test({prelude, Config}) ->
+  ok = wms_db_data_priv_state:create([node()]),
+  Config;
+%% destroy test case
+private_state_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+private_state_test(_Config) ->
+  TaskId = <<"task01">>,
+
+  % TaskInstanceID does not exists
+  ?assertEqual(not_found, wms_db_data_priv_state:load(TaskId)),
+
+  % Add private state
+  State1 = #{key => value},
+  ?assertEqual(ok, wms_db_data_priv_state:save(TaskId, State1)),
+
+  % Read state
+  Result1 = wms_db_data_priv_state:load(TaskId),
+  ?assertEqual(State1, Result1),
+
+  % Modify state
+  State2 = State1#{key1 => value1},
+  ?assertEqual(ok, wms_db_data_priv_state:save(TaskId, State2)),
+
+  Result2 = wms_db_data_priv_state:load(TaskId),
+  ?assertEqual(State2, Result2),
+
+  % Delete sate
+  ok = wms_db_data_priv_state:remove(TaskId),
+  ?assertEqual(not_found, wms_db_data_priv_state:load(TaskId)).
+
+%%--------------------------------------------------------------------
+%% Globale state tests
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+global_state_test({info, _Config}) ->
+  [""];
+global_state_test(suite) ->
+  ok;
+%% init test case
+global_state_test({prelude, Config}) ->
+  ok = wms_db_data_global_state:create([node()]),
+  Config;
+%% destroy test case
+global_state_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+global_state_test(_Config) ->
+  SetFun =
+    fun(_, NewValue) ->
+      NewValue
+    end,
+  AddFun =
+    fun(O1, O2) ->
+      O1 + O2
+    end,
+
+  Var1 = <<"var1">>,
+  Var2 = <<"var2">>,
+
+  % variable not found,
+  ?assertEqual(not_found, wms_db_data_global_state:load(Var1)),
+
+  % set value of var1
+  ?assertEqual(ok, wms_db_data_global_state:update(Var1, SetFun, 12)),
+  ?assertEqual(12, wms_db_data_global_state:load(Var1)),
+
+  % add literal to var1
+  ?assertEqual(ok, wms_db_data_global_state:update(Var1, AddFun, 20)),
+  ?assertEqual(12 + 20, wms_db_data_global_state:load(Var1)),
+
+  % set var2
+  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 100)),
+  ?assertEqual(ok, wms_db_data_global_state:update(Var1, AddFun, {global, Var2})),
+  ?assertEqual(12 + 20 + 100, wms_db_data_global_state:load(Var1)),
+
+  % remove var1
+  ?assertEqual(ok, wms_db_data_global_state:remove(Var1)),
+  ?assertEqual(not_found, wms_db_data_global_state:load(Var1)),
+
+  ok.
 %% =============================================================================
 %% Private test functions
 %% =============================================================================
