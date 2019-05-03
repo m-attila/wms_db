@@ -9,7 +9,7 @@
 -module(wms_db_handler).
 -author("Attila Makra").
 
--include("wms_db_app.hrl").
+-include("wms_db.hrl").
 
 %% API
 -export([init/1,

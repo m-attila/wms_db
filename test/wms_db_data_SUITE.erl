@@ -14,7 +14,7 @@
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include("wms_db_app.hrl").
+-include("wms_db.hrl").
 -include("../src/wms_db_inst_events.hrl").
 -include("../src/wms_db_inst_subscribers.hrl").
 
@@ -389,8 +389,9 @@ subscriber_test(_Config) ->
 
 % Remove db tables from mnesia
 delete_tables() ->
-  [                                      {atomic, ok} = mnesia:delete_table(Table) ||
-    Table <- mnesia:system_info(tables), Table =/= schema].
+  [{atomic, ok} = mnesia:delete_table(Table) ||
+    Table <- mnesia:system_info(tables),
+   Table =/= schema].
 
 assert_table_exists(Nodes, Table, IsExists) ->
   Results = wms_test:rpc_call(Nodes, mnesia, system_info, [tables]),

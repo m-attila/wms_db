@@ -6,10 +6,12 @@
   {applications,
    [kernel,
     stdlib,
-    mnesia
+    mnesia,
+    wms_cfg
    ]},
   {env,[]},
-  {modules, [wms_db_handler]},
+  {modules, [wms_db_handler, wms_db_data, wms_db_inst_events,
+             wms_db_inst_subscribers, wms_db_data_events]},
 
   {licenses, ["Apache 2.0"]},
   {links, []}

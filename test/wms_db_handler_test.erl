@@ -10,7 +10,7 @@
 -author("Attila Makra").
 
 -include_lib("eunit/include/eunit.hrl").
--include("wms_db_app.hrl").
+-include("wms_db.hrl").
 
 -define(TEST_NODES, [testnode1, testnode2]).
 
