@@ -33,28 +33,8 @@ start_link() ->
 %% Before OTP 18 tuples must be used to specify a child. e.g.
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 -spec init(Args :: term()) ->
-  'ignore'
-  | { 'ok'
-    , {   {'one_for_all', non_neg_integer(), pos_integer()}
-          | {'one_for_one', non_neg_integer(), pos_integer()}
-          | {'rest_for_one', non_neg_integer(), pos_integer()}
-          | {'simple_one_for_one', non_neg_integer(), pos_integer()}
-        , [{_
-        ,   {   atom()
-              , atom()
-              , 'undefined'
-                | [any()]}
-        ,   'permanent'
-            | 'temporary'
-            | 'transient'
-        ,   'brutal_kill'
-            | 'infinity'
-            | non_neg_integer()
-        ,   'supervisor'
-            | 'worker'
-        ,   'dynamic'
-            | [atom()]}
-          ]}}.
+  {ok, {SupFlags :: supervisor:sup_flags(), [ChildSpec :: supervisor:child_spec()]}}
+  | ignore.
 init([]) ->
   {ok, {{one_for_all, 0, 1}, []}}.
 

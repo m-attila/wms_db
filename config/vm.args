@@ -1,4 +1,4 @@
--sname wms_db
--setcookie wms_db
+-sname wms_dist
+-setcookie wms_dist
 +K true
 +A30

@@ -5,6 +5,8 @@
 
 -module(wms_db_app).
 
+-include("wms_db.hrl").
+
 -behaviour(application).
 
 %% Application callbacks
@@ -17,7 +19,9 @@
 -spec start(Type :: application:start_type(), Args :: term()) ->
   {ok, Pid :: pid()} |
   {error, Reason :: term()}.
-start(_StartType, _StartArgs) ->
+start(_StartType, []) ->
+  wms_db:load_config(wms_cfg:get(?APP_NAME, load_config, true)),
+  application:start(wms_dist),
   init(),
   {ok, _} = wms_db_sup:start_link().
 
@@ -34,5 +38,6 @@ stop(_State) ->
 -spec init() ->
   any().
 init() ->
-  Nodes = [node() | nodes()],
+  Nodes = wms_dist:get_dst_nodes(all),
   ok = wms_db_handler:init(Nodes).
+

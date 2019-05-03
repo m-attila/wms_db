@@ -14,7 +14,7 @@
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include("wms_db_app.hrl").
+-include("wms_db.hrl").
 
 -define(TEST_NODES, [testnode1, testnode2]).
 -define(TEST_RECORD, testrec).
@@ -54,7 +54,6 @@ suite() ->
 %% variable, but should NOT alter/remove any existing entries.
 %%--------------------------------------------------------------------
 init_per_suite(Config) ->
-  application:ensure_all_started(?APP_NAME),
   [{key, value} | Config].
 
 %%--------------------------------------------------------------------
@@ -212,16 +211,21 @@ all() ->
 %% =============================================================================
 
 table_create_group({prelude, Config}) ->
+  SaveMode = os:getenv("wms_mode"),
+  os:putenv("wms_mode", "multi_test"),
+
+  ok = wms_test:start_nodes(?TEST_NODES, [{env, [{"wms_mode", "multi_test"}]}]),
   {ok, StartedApps} = application:ensure_all_started(?APP_NAME),
-  ok = wms_test:start_nodes(?TEST_NODES),
   ok = wms_test:start_application(?APP_NAME),
-  [{started, StartedApps} | Config];
+  [{started, StartedApps}, {save_mode, SaveMode} | Config];
 table_create_group({postlude, Config}) ->
   delete_tables(),
   StartedApps = ?config(started, Config),
   [application:stop(App) || App <- StartedApps],
   ok = wms_test:stop_nodes(?TEST_NODES),
-  wms_test:stop_application(?APP_NAME).
+  wms_test:stop_application(?APP_NAME),
+  os:putenv("wms_mode", ?config(save_mode, Config)),
+  ok.
 
 %%--------------------------------------------------------------------
 %% Initialization test
@@ -387,7 +391,8 @@ read_write_kv_test(_Config) ->
 % Remove db tables from mnesia
 delete_tables() ->
   [{atomic, ok} = mnesia:delete_table(Table) ||
-    Table <- mnesia:system_info(tables), Table =/= schema].
+    Table <- mnesia:system_info(tables),
+   Table =/= schema].
 
 assert_table_exists(Nodes, Table, IsExists) ->
   Results = wms_test:rpc_call(Nodes, mnesia, system_info, [tables]),

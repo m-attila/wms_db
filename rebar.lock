@@ -1,0 +1,12 @@
+[{<<"wms_cfg">>,
+  {git,"git@github.com:m-attila/wms_cfg.git",
+       {ref,"d39fb663a28cb65fdd1ac9f716674625ff532712"}},
+  1},
+ {<<"wms_common">>,
+  {git,"git@github.com:m-attila/wms_common.git",
+       {ref,"2a3414c0ec271489e391d03e8c0abcf6adfecdc4"}},
+  0},
+ {<<"wms_dist">>,
+  {git,"git@github.com:m-attila/wms_dist.git",
+       {ref,"b5c1c28d3d0e155d19f686acc8929223084cc276"}},
+  0}].

@@ -116,8 +116,7 @@ remove_subscriber(#{fields :=#{task_instance_id := TaskInstanceID,
 
 -spec delete_subscription(subscribtion_instance(), subscribtion()) ->
   ok.
-delete_subscription(#{fields := #{timestamp := Timestamp}},
-                    #subscribtion{event_id = EventID}) ->
+delete_subscription(_, #subscribtion{event_id = EventID}) ->
   wms_db_handler:delete(?SUBS_TABLE_NAME, EventID).
 
 -spec set_subscribers(subscribtion_instance(), subscribtion(), [subscriber()]) ->
