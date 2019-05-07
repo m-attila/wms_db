@@ -71,28 +71,34 @@ load(Variable) ->
 %% ###### Purpose
 %% Modify value of global state' variable
 %% ###### Arguments
-%% 
+%%
 %% ###### Returns
-%% 
+%%
 %%-------------------------------------------------------------------
 %%
 %% @end
 -spec update(global_state_variable(),
              global_state_operator(),
-             global_state_operand()) ->
+             global_state_value_or_reference()) ->
               term().
 update(Variable, Function, Operand) ->
-  update(Variable, Variable, Function, Operand).
+  update({global, Variable}, Variable, Function, Operand).
 
--spec update(global_state_variable(),
+-spec update(global_state_value_or_reference(),
              global_state_variable(),
              global_state_operator(),
-             global_state_operand()) ->
+             global_state_value_or_reference()) ->
               term().
 update(SourceVariable, DestinationVariable, Function, Operand) ->
   Transaction =
     fun() ->
-      CurrentValue = load(SourceVariable),
+      CurrentValue =
+        case SourceVariable of
+          {global, Name} ->
+            load(Name);
+          _ ->
+            SourceVariable
+        end,
 
       OperandValue =
         case Operand of

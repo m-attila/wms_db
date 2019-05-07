@@ -478,6 +478,7 @@ global_state_test(_Config) ->
 
   Var1 = <<"var1">>,
   Var2 = <<"var2">>,
+  Var3 = <<"var3">>,
 
   % variable not found,
   ?assertEqual(not_found, wms_db_data_global_state:load(Var1)),
@@ -494,6 +495,19 @@ global_state_test(_Config) ->
   ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 100)),
   ?assertEqual(ok, wms_db_data_global_state:update(Var1, AddFun, {global, Var2})),
   ?assertEqual(12 + 20 + 100, wms_db_data_global_state:load(Var1)),
+
+  % set var3 from var1 + var2
+  ?assertEqual(ok, wms_db_data_global_state:update(Var1, SetFun, 100)),
+  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 200)),
+  ?assertEqual(ok, wms_db_data_global_state:update({global, Var1}, Var3,
+                                                   AddFun, {global, Var2})),
+  ?assertEqual(100 + 200, wms_db_data_global_state:load(Var3)),
+
+  % set var3 from literal + var2
+  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 200)),
+  ?assertEqual(ok, wms_db_data_global_state:update(300, Var3,
+                                                   AddFun, {global, Var2})),
+  ?assertEqual(300 + 200, wms_db_data_global_state:load(Var3)),
 
   % remove var1
   ?assertEqual(ok, wms_db_data_global_state:remove(Var1)),

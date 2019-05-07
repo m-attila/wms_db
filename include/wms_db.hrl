@@ -20,7 +20,7 @@
 -type global_state_value() :: term() | [term()].
 
 -type global_state_reference() :: {global, global_state_variable()}.
--type global_state_operand() :: global_state_reference() | global_state_value().
+-type global_state_value_or_reference() :: global_state_reference() | global_state_value().
 
 -type global_state_operator() ::
 fun((global_state_value(),  global_state_value())->
