@@ -14,6 +14,7 @@
 -export([create/1,
          load/1,
          update/3,
+         update/4,
          remove/1]).
 
 %% @doc
@@ -81,9 +82,17 @@ load(Variable) ->
              global_state_operand()) ->
               term().
 update(Variable, Function, Operand) ->
+  update(Variable, Variable, Function, Operand).
+
+-spec update(global_state_variable(),
+             global_state_variable(),
+             global_state_operator(),
+             global_state_operand()) ->
+              term().
+update(SourceVariable, DestinationVariable, Function, Operand) ->
   Transaction =
     fun() ->
-      CurrentValue = load(Variable),
+      CurrentValue = load(SourceVariable),
 
       OperandValue =
         case Operand of
@@ -94,7 +103,7 @@ update(Variable, Function, Operand) ->
         end,
 
       NewValue = Function(CurrentValue, OperandValue),
-      wms_db_handler:write_kv(?TABLE_NAME, Variable, NewValue)
+      wms_db_handler:write_kv(?TABLE_NAME, DestinationVariable, NewValue)
     end,
   wms_db_handler:transaction(Transaction).
 
