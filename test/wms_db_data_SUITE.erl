@@ -219,6 +219,7 @@ all() ->
 events_group({prelude, Config}) ->
   {ok, StartedApps} = application:ensure_all_started(?APP_NAME),
   ok = wms_test:start_application(?APP_NAME),
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
   [{started, StartedApps} | Config];
 events_group({postlude, Config}) ->
   delete_tables(),
@@ -244,10 +245,13 @@ create_table_test({postlude, _Config}) ->
   ok;
 %% test case implementation
 create_table_test(_Config) ->
-  assert_table_exists([node()], ?EVENT_TABLE_NAME, false),
-  assert_table_exists([node()], ?SUBS_TABLE_NAME, false),
+  assert_table_exists([node()], ?EVENT_TABLE_NAME, true),
+  assert_table_exists([node()], ?SUBS_TABLE_NAME, true),
 
-  ?assertEqual(ok, wms_db_data_events:create([node()])),
+  {_, ok} = mnesia:delete_table(?EVENT_TABLE_NAME),
+  {_, ok} = mnesia:delete_table(?SUBS_TABLE_NAME),
+
+  ?assertEqual(ok, wms_db_data_events:create()),
 
   assert_table_exists([node()], ?EVENT_TABLE_NAME, true),
   assert_table_exists([node()], ?SUBS_TABLE_NAME, true).
@@ -398,6 +402,7 @@ subscriber_test(_Config) ->
 state_group({prelude, Config}) ->
   {ok, StartedApps} = application:ensure_all_started(?APP_NAME),
   ok = wms_test:start_application(?APP_NAME),
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
   [{started, StartedApps} | Config];
 state_group({postlude, Config}) ->
   delete_tables(),
@@ -417,7 +422,7 @@ private_state_test(suite) ->
   ok;
 %% init test case
 private_state_test({prelude, Config}) ->
-  ok = wms_db_data_priv_state:create([node()]),
+  ok = wms_db_data_priv_state:create(),
   Config;
 %% destroy test case
 private_state_test({postlude, _Config}) ->
@@ -460,7 +465,7 @@ global_state_test(suite) ->
   ok;
 %% init test case
 global_state_test({prelude, Config}) ->
-  ok = wms_db_data_global_state:create([node()]),
+  ok = wms_db_data_global_state:create(),
   Config;
 %% destroy test case
 global_state_test({postlude, _Config}) ->
@@ -481,37 +486,40 @@ global_state_test(_Config) ->
   Var3 = <<"var3">>,
 
   % variable not found,
-  ?assertEqual(not_found, wms_db_data_global_state:load(Var1)),
+  ?assertEqual(not_found, wms_db_data_global_state:get(Var1)),
 
   % set value of var1
-  ?assertEqual(ok, wms_db_data_global_state:update(Var1, SetFun, 12)),
-  ?assertEqual(12, wms_db_data_global_state:load(Var1)),
+  ?assertEqual(ok, wms_db_data_global_state:set(Var1, 255)),
+  ?assertEqual(255, wms_db_data_global_state:get(Var1)),
+
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var1, SetFun, 12)),
+  ?assertEqual(12, wms_db_data_global_state:get(Var1)),
 
   % add literal to var1
-  ?assertEqual(ok, wms_db_data_global_state:update(Var1, AddFun, 20)),
-  ?assertEqual(12 + 20, wms_db_data_global_state:load(Var1)),
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var1, AddFun, 20)),
+  ?assertEqual(12 + 20, wms_db_data_global_state:get(Var1)),
 
   % set var2
-  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 100)),
-  ?assertEqual(ok, wms_db_data_global_state:update(Var1, AddFun, {global, Var2})),
-  ?assertEqual(12 + 20 + 100, wms_db_data_global_state:load(Var1)),
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var2, SetFun, 100)),
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var1, AddFun, {global, Var2})),
+  ?assertEqual(12 + 20 + 100, wms_db_data_global_state:get(Var1)),
 
   % set var3 from var1 + var2
-  ?assertEqual(ok, wms_db_data_global_state:update(Var1, SetFun, 100)),
-  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 200)),
-  ?assertEqual(ok, wms_db_data_global_state:update({global, Var1}, Var3,
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var1, SetFun, 100)),
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var2, SetFun, 200)),
+  ?assertEqual(ok, wms_db_data_global_state:modify({global, Var1}, Var3,
                                                    AddFun, {global, Var2})),
-  ?assertEqual(100 + 200, wms_db_data_global_state:load(Var3)),
+  ?assertEqual(100 + 200, wms_db_data_global_state:get(Var3)),
 
   % set var3 from literal + var2
-  ?assertEqual(ok, wms_db_data_global_state:update(Var2, SetFun, 200)),
-  ?assertEqual(ok, wms_db_data_global_state:update(300, Var3,
+  ?assertEqual(ok, wms_db_data_global_state:modify(Var2, SetFun, 200)),
+  ?assertEqual(ok, wms_db_data_global_state:modify(300, Var3,
                                                    AddFun, {global, Var2})),
-  ?assertEqual(300 + 200, wms_db_data_global_state:load(Var3)),
+  ?assertEqual(300 + 200, wms_db_data_global_state:get(Var3)),
 
   % remove var1
   ?assertEqual(ok, wms_db_data_global_state:remove(Var1)),
-  ?assertEqual(not_found, wms_db_data_global_state:load(Var1)),
+  ?assertEqual(not_found, wms_db_data_global_state:get(Var1)),
 
   ok.
 %% =============================================================================

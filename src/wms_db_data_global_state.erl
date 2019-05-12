@@ -9,12 +9,15 @@
 -module(wms_db_data_global_state).
 -author("Attila Makra").
 
+-compile({no_auto_import, [get/1]}).
+
 -include("wms_db_data_global_state.hrl").
 %% API
--export([create/1,
-         load/1,
-         update/3,
-         update/4,
+-export([create/0,
+         get/1,
+         set/2,
+         modify/3,
+         modify/4,
          remove/1]).
 
 %% @doc
@@ -32,10 +35,10 @@
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec create([node()]) ->
-  ok | {error, term()}.
-create(Nodes) ->
-  wms_db_handler:create_kv_table(?TABLE_NAME, set, Nodes).
+-spec create() ->
+  ok.
+create() ->
+  ok = wms_db_handler:create_kv_table(?TABLE_NAME, set).
 
 %% @doc
 %%
@@ -52,15 +55,35 @@ create(Nodes) ->
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec load(global_state_variable()) ->
+-spec get(global_state_variable()) ->
   term().
-load(Variable) ->
+get(Variable) ->
   case wms_db_handler:read_kv(?TABLE_NAME, Variable) of
     {ok, []} ->
       not_found;
     {ok, [Value]} ->
       Value
   end.
+
+%% @doc
+%%
+%%-------------------------------------------------------------------
+%%
+%% ### Function
+%% set/2
+%% ###### Purpose
+%% Set global state variable value
+%% ###### Arguments
+%%
+%% ###### Returns
+%%
+%%-------------------------------------------------------------------
+%%
+%% @end
+-spec set(global_state_variable(), global_state_value()) ->
+  ok.
+set(Variable, Value) ->
+  modify(Value, Variable, fun set_op/2, undefined).
 
 %% @doc
 %%
@@ -77,25 +100,25 @@ load(Variable) ->
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec update(global_state_variable(),
+-spec modify(global_state_variable(),
              global_state_operator(),
              global_state_value_or_reference()) ->
-              term().
-update(Variable, Function, Operand) ->
-  update({global, Variable}, Variable, Function, Operand).
+              ok.
+modify(Variable, Function, Operand) ->
+  modify({global, Variable}, Variable, Function, Operand).
 
--spec update(global_state_value_or_reference(),
+-spec modify(global_state_value_or_reference(),
              global_state_variable(),
              global_state_operator(),
              global_state_value_or_reference()) ->
-              term().
-update(SourceVariable, DestinationVariable, Function, Operand) ->
+              ok.
+modify(SourceVariable, DestinationVariable, Function, Operand) ->
   Transaction =
     fun() ->
       CurrentValue =
         case SourceVariable of
           {global, Name} ->
-            load(Name);
+            get(Name);
           _ ->
             SourceVariable
         end,
@@ -103,7 +126,7 @@ update(SourceVariable, DestinationVariable, Function, Operand) ->
       OperandValue =
         case Operand of
           {global, VariableName} ->
-            load(VariableName);
+            get(VariableName);
           Other ->
             Other
         end,
@@ -122,9 +145,9 @@ update(SourceVariable, DestinationVariable, Function, Operand) ->
 %% ###### Purpose
 %% Removes variable from global state.
 %% ###### Arguments
-%% 
+%%
 %% ###### Returns
-%% 
+%%
 %%-------------------------------------------------------------------
 %%
 %% @end
@@ -136,3 +159,13 @@ remove(Variable) ->
       wms_db_handler:delete(?TABLE_NAME, Variable)
     end,
   wms_db_handler:transaction(Transaction).
+
+
+%% =============================================================================
+%% Private functions
+%% =============================================================================
+
+-spec set_op(term(), undefined) ->
+  term().
+set_op(Value, _) ->
+  Value.

@@ -36,7 +36,15 @@ start_link() ->
   {ok, {SupFlags :: supervisor:sup_flags(), [ChildSpec :: supervisor:child_spec()]}}
   | ignore.
 init([]) ->
-  {ok, {{one_for_all, 0, 1}, []}}.
+  ChildSpecs = [#{id => wms_db_handler_service,
+                  start => {wms_db_handler_service, start_link, []}
+                }
+               ],
+  SupFlags = #{strategy => one_for_one,
+               intensity => 5,
+               period => 1
+             },
+  {ok, {SupFlags, ChildSpecs}}.
 
 %%====================================================================
 %% Internal functions

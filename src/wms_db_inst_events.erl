@@ -15,7 +15,7 @@
 -define(MAX_EVENT_AGE_SECOND, 60 * 60 * 24 * 7).
 
 %% API
--export([create_table/1,
+-export([create_table/0,
          new/2]).
 
 %% =============================================================================
@@ -28,13 +28,13 @@
 %% API functions
 %% =============================================================================
 
--spec create_table([node()]) ->
+-spec create_table() ->
   ok |{error, term()}.
-create_table(Nodes) ->
+create_table() ->
   wms_db_handler:create_table(
     ?EVENT_TABLE_NAME,
     set,
-    event, record_info(fields, event), Nodes).
+    event, record_info(fields, event)).
 
 -spec new(timestamp() | undefined, binary()) ->
   any().

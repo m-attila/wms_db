@@ -13,7 +13,7 @@
 -include("wms_db_inst_subscribers.hrl").
 -include("wms_db_inst_events.hrl").
 %% API
--export([create/1,
+-export([create/0,
          add_subscriber/3,
          remove_subscriber/3,
          get_subscribers/2,
@@ -40,11 +40,11 @@
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec create([node()]) ->
+-spec create() ->
   ok.
-create(Nodes) ->
-  ok = wms_db_inst_subscribers:create_table(Nodes),
-  ok = wms_db_inst_events:create_table(Nodes).
+create() ->
+  ok = wms_db_inst_subscribers:create_table(),
+  ok = wms_db_inst_events:create_table().
 
 %% =============================================================================
 %% Subscriber handling

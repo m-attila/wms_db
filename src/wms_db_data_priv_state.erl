@@ -12,7 +12,7 @@
 -include("wms_db_data_priv_state.hrl").
 
 %% API
--export([create/1, save/2, load/1, remove/1]).
+-export([create/0, save/2, load/1, remove/1]).
 
 %% @doc
 %%
@@ -29,10 +29,10 @@
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec create([node()]) ->
-  ok | {error, term()}.
-create(Nodes) ->
-  wms_db_handler:create_kv_table(?TABLE_NAME, set, Nodes).
+-spec create() ->
+  ok.
+create() ->
+  ok = wms_db_handler:create_kv_table(?TABLE_NAME, set).
 
 %% @doc
 %%

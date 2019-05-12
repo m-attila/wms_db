@@ -11,10 +11,12 @@
 
 -include("wms_db.hrl").
 
+-define(WAIT_FOR_INIT_TIMEOUT_MSEC, 5000).
+
 %% API
--export([init/1,
-         create_table/5,
-         create_kv_table/3,
+-export([init/2,
+         create_table/4,
+         create_kv_table/2,
          read/2,
          read/3,
          read_kv/2,
@@ -52,22 +54,61 @@
 %% ###### Purpose
 %% Initialize mnesia database.
 %% ###### Arguments
-%% Nodes - mnesia nodes.
+%% Nodes - all mnesia nodes.
+%% AvaliableNodes - available mnesia nodes.
 %% ###### Returns
 %%
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec init([node()]) ->
-  ok | {error, term()}.
-init(Nodes) ->
-  case mnesia:change_config(extra_db_nodes, Nodes) of
+-spec init([node()], [node()]) ->
+  ok | {error, term()} | {error, cluster_not_ready}.
+init(AllNodes, AvailableNodes) ->
+  ok = application:ensure_started(mnesia),
+  SchemaExists = lists:member(node(),
+                              mnesia:table_info(schema, disc_copies)),
+
+  case {SchemaExists, list_eq(AllNodes, AvailableNodes)} of
+    {false, false} ->
+      {error, cluster_not_ready};
+    {false, true} ->
+      change_config(AllNodes, is_mnesia_started(AllNodes));
+    {true, _} ->
+      ok
+  end.
+
+-spec is_mnesia_started([node()]) ->
+  boolean().
+is_mnesia_started([Node]) when Node =:= node() ->
+  true;
+is_mnesia_started(Nodes) ->
+  RemoteNodes = lists:delete(node(), Nodes),
+  {NodeAnswers, BadNodes} = rpc:multicall(RemoteNodes,
+                                          application, which_applications, []),
+  case BadNodes of
+    [] ->
+      lists:any(
+        fun(NodeAns) ->
+          lists:any(
+            fun({App, _, _}) ->
+              App =:= mnesia
+            end, NodeAns)
+        end, NodeAnswers);
+    _ ->
+      false
+  end.
+
+-spec change_config([node()], boolean()) ->
+  ok | {error, term()} | {error, cluster_not_ready}.
+change_config(_, false) ->
+  {error, cluster_not_ready};
+change_config(AllNodes, true) ->
+  case mnesia:change_config(extra_db_nodes, AllNodes) of
     {ok, _} ->
       init_db();
     Other ->
       Other
   end.
-
 
 -spec init_db() ->
   ok | {error, term()}.
@@ -81,6 +122,11 @@ init_db() ->
     {aborted, Reason} ->
       {error, Reason}
   end.
+
+-spec list_eq([node()], [node()]) ->
+  boolean().
+list_eq(List1, List2) ->
+  lists:usort(List1) =:= lists:usort(List2).
 
 %% -----------------------------------------------------------------------------
 %% Table creation.
@@ -105,42 +151,31 @@ init_db() ->
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec create_table(atom(), table_types(), atom(), [atom()], [node()]) ->
+-spec create_table(atom(), table_types(), atom(), [atom()]) ->
   ok | {error, term()}.
-create_table(TableName, Type, RecordName, Attributes, Nodes) ->
-  try
-    OpRes = create_disk_copy_table(TableName, Type, RecordName, Attributes, Nodes),
-    ok = check_create_result(OpRes),
-    ok = add_table_copy_to_node(TableName)
-  catch
-    _ : TableCreationError ->
-      {error, TableCreationError}
+
+create_table(TableName, Type, RecordName, Attributes) ->
+  TableNodes = get_table_nodes(TableName),
+  case TableNodes of
+    [] ->
+      % no table in system
+      OpRes = create_disk_copy_table(TableName, Type, RecordName,
+                                     Attributes, [node()]),
+      ok = check_create_result(OpRes);
+    _ ->
+      % table already exists on another node
+      add_table_copy_to_node(TableName)
   end.
 
-%% @doc
-%%
-%%-------------------------------------------------------------------
-%%
-%% ### Function
-%% create_kv_table/3
-%% ###### Purpose
-%% Create key-value storage table.
-%% ###### Arguments
-%% * TableName - name of table
-%% * Type - set | ordered_set
-%% * RecordName - name of record what will be stored
-%% * Attributes - field names of the record
-%% * Nodes - mnesia db nodes
-%% %% ###### Returns
-%%
-%%-------------------------------------------------------------------
-%%
-%% @end
--spec create_kv_table(atom(), table_types(), [node()]) ->
-  ok | {error, term()}.
-create_kv_table(TableName, Type, Nodes) ->
-  create_table(TableName, Type, key_value_record,
-               record_info(fields, key_value_record), Nodes).
+-spec get_table_nodes(atom()) ->
+  [node()].
+get_table_nodes(Table) ->
+  try
+    mnesia:table_info(Table, disc_copies)
+  catch
+    _:{aborted, {no_exists, Table, disc_copies}} ->
+      []
+  end.
 
 -spec create_disk_copy_table(atom(), table_types(), atom(), [atom()], [node()]) ->
   db_result(ok).
@@ -182,6 +217,32 @@ add_table_copy_to_node(TableName) ->
     {aborted, Reason} ->
       {error, Reason}
   end.
+
+
+%% @doc
+%%
+%%-------------------------------------------------------------------
+%%
+%% ### Function
+%% create_kv_table/3
+%% ###### Purpose
+%% Create key-value storage table.
+%% ###### Arguments
+%% * TableName - name of table
+%% * Type - set | ordered_set
+%% * RecordName - name of record what will be stored
+%% * Attributes - field names of the record
+%% * Nodes - mnesia db nodes
+%% %% ###### Returns
+%%
+%%-------------------------------------------------------------------
+%%
+%% @end
+-spec create_kv_table(atom(), table_types()) ->
+  ok | {error, term()}.
+create_kv_table(TableName, Type) ->
+  create_table(TableName, Type, key_value_record,
+               record_info(fields, key_value_record)).
 
 %% -----------------------------------------------------------------------------
 %% Delete table
@@ -235,13 +296,16 @@ read(TableName, Key) ->
 %%
 %% @end
 -spec read(atom(), term(), read | write) ->
-  {ok, [term()]}.
+  {ok, [term()]} | {error, term()}.
 read(TableName, Key, LockingMode) ->
   case mnesia:is_transaction() of
     true ->
       {ok, mnesia:read(TableName, Key, LockingMode)};
     false ->
-      {ok, mnesia:dirty_read(TableName, Key)}
+      wms_db_handler_service:run(
+        fun() ->
+          {ok, mnesia:dirty_read(TableName, Key)}
+        end, ?WAIT_FOR_INIT_TIMEOUT_MSEC)
   end.
 
 %% @doc
@@ -371,7 +435,10 @@ is_transaction() ->
 transaction(TransactionFun) ->
   case mnesia:is_transaction() of
     false ->
-      unpack_mnesia_result(mnesia:transaction(TransactionFun));
+      wms_db_handler_service:run(
+        fun() ->
+          unpack_mnesia_result(mnesia:transaction(TransactionFun))
+        end, ?WAIT_FOR_INIT_TIMEOUT_MSEC);
     true ->
       TransactionFun()
   end.

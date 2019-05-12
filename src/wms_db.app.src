@@ -10,8 +10,8 @@
     wms_cfg
    ]},
   {env,[]},
-  {modules, [wms_db_handler, wms_db_data, wms_db_inst_events,
-             wms_db_inst_subscribers, wms_db_data_events]},
+  {modules, [wms_db, wms_db_handler, wms_db_data, wms_db_inst_events,
+             wms_db_inst_subscribers, wms_db_data_events, wms_db_handler_service]},
 
   {licenses, ["Apache 2.0"]},
   {links, []}

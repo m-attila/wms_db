@@ -12,13 +12,10 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("wms_db.hrl").
 
--define(TEST_NODES, [testnode1, testnode2]).
-
 init_test() ->
   Node = [node()],
 
-  % node are not running
-  ?assertMatch({error, {node_not_running, _}}, wms_db_handler:init(Node)).
+  ?assertMatch(ok, wms_db_handler:init(Node, Node)).
 
 convert_test() ->
   ?assertEqual(not_found, wms_db_handler:convert({ok, []})),

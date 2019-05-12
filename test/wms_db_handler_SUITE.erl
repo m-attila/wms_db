@@ -16,7 +16,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("wms_db.hrl").
 
--define(TEST_NODES, [testnode1, testnode2]).
+-define(TEST_NODES, [t1, t2]).
 -define(TEST_RECORD, testrec).
 -record(testrec, {name :: string(), age :: pos_integer()}).
 
@@ -245,9 +245,7 @@ init_test({postlude, _Config}) ->
   ok;
 %% test case implementation
 init_test(_Config) ->
-  Nodes = [node() | nodes()],
-  ?assertEqual(ok, wms_db_handler:init(Nodes)).
-
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)).
 
 %%--------------------------------------------------------------------
 %% Create and delete table tests.
@@ -270,10 +268,12 @@ create_delete_table_test({postlude, _Config}) ->
 create_delete_table_test(_Config) ->
   Nodes = [node() | nodes()],
 
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
+
   % create tables on all nodes
 
   ok = wms_db_handler:create_table(tab1, set, ?TEST_RECORD,
-                                   record_info(fields, ?TEST_RECORD), Nodes),
+                                   record_info(fields, ?TEST_RECORD)),
   assert_table_exists(Nodes, tab1, true),
 
   % delete table on all nodes
@@ -281,7 +281,7 @@ create_delete_table_test(_Config) ->
   assert_table_exists(Nodes, tab1, false),
 
   % create key-value storage table
-  ok = wms_db_handler:create_kv_table(tab2, set, Nodes),
+  ok = wms_db_handler:create_kv_table(tab2, set),
   assert_table_exists(Nodes, tab2, true).
 
 %%--------------------------------------------------------------------
@@ -303,9 +303,11 @@ read_write_delete_test({postlude, _Config}) ->
   ok;
 %% test case implementation
 read_write_delete_test(_Config) ->
-  Nodes = [node() | nodes()],
+
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
+
   ok = wms_db_handler:create_table(tab1, set, ?TEST_RECORD,
-                                   record_info(fields, ?TEST_RECORD), Nodes),
+                                   record_info(fields, ?TEST_RECORD)),
 
   ?assertEqual({ok, []}, wms_db_handler:read(tab1, not_found_key)),
 
@@ -367,8 +369,9 @@ read_write_kv_test({postlude, _Config}) ->
   ok;
 %% test case implementation
 read_write_kv_test(_Config) ->
-  Nodes = [node() | nodes()],
-  ok = wms_db_handler:create_kv_table(tab1, set, Nodes),
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
+
+  ok = wms_db_handler:create_kv_table(tab1, set),
 
   % not found
   ?assertEqual({ok, []}, wms_db_handler:read_kv(tab1, key1)),

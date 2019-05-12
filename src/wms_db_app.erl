@@ -39,6 +39,4 @@ stop(_State) ->
 -spec init() ->
   any().
 init() ->
-  Nodes = wms_dist:get_dst_nodes(all),
-  ok = wms_db_handler:init(Nodes).
-
+  ok.
