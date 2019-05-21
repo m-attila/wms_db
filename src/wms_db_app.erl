@@ -6,6 +6,7 @@
 -module(wms_db_app).
 
 -include("wms_db.hrl").
+-include_lib("wms_logger/include/wms_logger.hrl").
 
 -behaviour(application).
 
@@ -20,9 +21,6 @@
   {ok, Pid :: pid()} |
   {error, Reason :: term()}.
 start(_StartType, []) ->
-  wms_dist:load_config(),
-  wms_db:load_config(),
-  application:start(wms_dist),
   init(),
   {ok, _} = wms_db_sup:start_link().
 
@@ -39,4 +37,4 @@ stop(_State) ->
 -spec init() ->
   any().
 init() ->
-  ok.
+  ok = wms_cfg:start_apps(?APP_NAME, [wms_dist]).

@@ -164,8 +164,9 @@ create_table(TableName, Type, RecordName, Attributes) ->
       ok = check_create_result(OpRes);
     _ ->
       % table already exists on another node
-      add_table_copy_to_node(TableName)
-  end.
+      ok
+  end,
+  add_table_copy_to_node(TableName).
 
 -spec get_table_nodes(atom()) ->
   [node()].

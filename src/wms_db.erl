@@ -11,19 +11,13 @@
 -include("wms_db.hrl").
 
 %% API
--export([load_config/0,
-         get_global_variable/1,
+-export([get_global_variable/1,
          set_global_variable/2,
          variable_transaction/2, save_private_state/2]).
 
 %% =============================================================================
 %% API functions
 %% =============================================================================
-
--spec load_config() ->
-  ok.
-load_config() ->
-  load_config(wms_cfg:get(?APP_NAME, load_config, true)).
 
 -spec get_global_variable(global_state_variable()) ->
   not_found | global_state_value().
@@ -48,16 +42,3 @@ variable_transaction(StartEnvironment, Transaction) ->
   ok | no_return().
 save_private_state(TaskInstanceID, Environment) ->
   wms_db_data_priv_state:save(TaskInstanceID, Environment).
-
-
-%% =============================================================================
-%% Private functions
-%% =============================================================================
-
--spec load_config(boolean()) ->
-  ok.
-load_config(true) ->
-  Path = filename:join(code:priv_dir(?APP_NAME), "wms_db.config"),
-  ok = wms_cfg:overload_config(wms_cfg:get_mode(), [Path]);
-load_config(_) ->
-  ok.
