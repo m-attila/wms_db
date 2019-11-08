@@ -25,7 +25,10 @@
 
 -define(TABLE_MODULES, [wms_db_data_events,
                         wms_db_data_global_state,
-                        wms_db_data_priv_state]).
+                        wms_db_data_priv_state,
+                        wms_db_data_taskdef,
+                        wms_db_data_tasks,
+                        wms_db_data_task_instance_status]).
 
 %% =============================================================================
 %% Private types
@@ -166,8 +169,10 @@ do_table_creation([], SuccessCreated) ->
 do_table_creation([TableModule | Rest], Success) ->
   try
     apply(TableModule, create, []),
+    ?info("~s table creation was successed", [TableModule]),
     do_table_creation(Rest, [TableModule | Success])
   catch
-    _:_ ->
+    C:R ->
+      ?error("Error at ~s table creation : ~p : ~p", [TableModule, C, R]),
       do_table_creation(Rest, Success)
   end.

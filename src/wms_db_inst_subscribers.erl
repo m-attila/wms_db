@@ -37,7 +37,7 @@ create_table() ->
     set,
     subscribtion, record_info(fields, subscribtion)).
 
--spec new(timestamp(), binary(), binary() | undefined) ->
+-spec new(timestamp() | dont_care, binary(), binary() | undefined) ->
   any().
 new(Timestamp, EventID, TaskInstanceID) ->
   Data = #{timestamp => Timestamp,
@@ -126,6 +126,9 @@ set_subscribers(_, Subscription, Subscribers) ->
 
 -spec filter_subscribers(subscribtion_instance(), [subscriber()]) ->
   [subscriber()].
+filter_subscribers(#{fields := #{timestamp := dont_care}},
+                   Subscribers) ->
+  Subscribers;
 filter_subscribers(#{fields := #{timestamp := Timestamp}},
                    Subscribers) ->
   lists:filter

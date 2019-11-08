@@ -17,6 +17,8 @@
 -include("wms_db.hrl").
 -include("../src/wms_db_inst_events.hrl").
 -include("../src/wms_db_inst_subscribers.hrl").
+-include("../src/wms_db_data_taskdef.hrl").
+-include("../src/wms_db_inst_tasks.hrl").
 
 %%--------------------------------------------------------------------
 %% COMMON TEST CALLBACK FUNCTIONS
@@ -168,6 +170,15 @@ groups() ->
        private_state_test,
        global_state_test
      ]
+    },
+    {task_group,
+     [{repeat_until_any_fail, 1}],
+     [
+       taskdef_test,
+       task_test,
+       taskdef_task_test,
+       task_status_test
+     ]
     }
   ].
 
@@ -188,7 +199,8 @@ groups() ->
 all() ->
   [
     {group, events_group},
-    {group, state_group}
+    {group, state_group},
+    {group, task_group}
   ].
 
 %%--------------------------------------------------------------------
@@ -522,6 +534,268 @@ global_state_test(_Config) ->
   ?assertEqual(not_found, wms_db_data_global_state:get(Var1)),
 
   ok.
+
+
+%% =============================================================================
+%% Taskdef group
+%% =============================================================================
+
+task_group({prelude, Config}) ->
+  {ok, StartedApps} = application:ensure_all_started(?APP_NAME),
+  ok = wms_test:start_application(?APP_NAME),
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
+  [{started, StartedApps} | Config];
+task_group({postlude, Config}) ->
+  delete_tables(),
+  StartedApps = ?config(started, Config),
+  [application:stop(App) || App <- StartedApps],
+  wms_test:stop_application(?APP_NAME).
+
+%%--------------------------------------------------------------------
+%% Tests for taskdef table
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+taskdef_test({info, _Config}) ->
+  [""];
+taskdef_test(suite) ->
+  ok;
+%% init test case
+taskdef_test({prelude, Config}) ->
+  ok = wms_db_data_taskdef:create(),
+  Config;
+%% destroy test case
+taskdef_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+taskdef_test(_Config) ->
+  TaskName = <<"task1">>,
+  Definition = def1,
+  Type = auto,
+
+  % create new taskdef
+  ok = wms_db_data_taskdef:add_taskdef(TaskName, Definition, Type),
+
+  % read record
+  Expected = #taskdef{
+    task_name  = TaskName,
+    definition = Definition,
+    type       = Type
+  },
+
+  Result = wms_db_data_taskdef:get_taskdef(TaskName),
+  ?assertEqual(Expected, Result),
+
+  % record does not exists
+  not_found = wms_db_data_taskdef:get_taskdef(<<"notask">>),
+
+  % modify record
+  Definition1 = def2,
+  Type1 = false,
+
+  Expected1 = #taskdef{
+    task_name  = TaskName,
+    definition = Definition1,
+    type       = Type1
+  },
+
+  ok = wms_db_data_taskdef:add_taskdef(TaskName, Definition1, Type1),
+
+  Result1 = wms_db_data_taskdef:get_taskdef(TaskName),
+  ?assertEqual(Expected1, Result1),
+
+  % return all taskdef records
+  ?assertEqual([Expected1],
+               wms_db_data_taskdef:get_taskdefs()),
+
+  % remove record
+  ok = wms_db_data_taskdef:remove_taskdef(TaskName),
+  % record does not exists
+  not_found = wms_db_data_taskdef:get_taskdef(TaskName).
+
+%%--------------------------------------------------------------------
+%% Tests for task table
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+task_test({info, _Config}) ->
+  [""];
+task_test(suite) ->
+  ok;
+%% init test case
+task_test({prelude, Config}) ->
+  ok = wms_db_data_tasks:create(),
+  Config;
+%% destroy test case
+task_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+task_test(_Config) ->
+  TaskName = <<"task1">>,
+
+  % no task instances
+  Expected = [],
+  Result = wms_db_data_tasks:get_task_instances(TaskName),
+  ?assertEqual(Expected, Result),
+
+  % add task instance
+  TaskInstanceID1 = <<"ID1">>,
+  ok = wms_db_data_tasks:add_task_instance(TaskName, TaskInstanceID1),
+  Expected1 = [TaskInstanceID1],
+  Result1 = wms_db_data_tasks:get_task_instances(TaskName),
+  ?assertEqual(Expected1, Result1),
+
+  % add another task instance
+  TaskInstanceID2 = <<"ID2">>,
+  ok = wms_db_data_tasks:add_task_instance(TaskName, TaskInstanceID2),
+  Expected2 = [TaskInstanceID2, TaskInstanceID1],
+  Result2 = wms_db_data_tasks:get_task_instances(TaskName),
+  ?assertEqual(Expected2, Result2),
+
+  % remove instance2
+  ok = wms_db_data_tasks:remove_task_instance(TaskName, TaskInstanceID2),
+  Expected3 = [TaskInstanceID1],
+  Result3 = wms_db_data_tasks:get_task_instances(TaskName),
+  ?assertEqual(Expected3, Result3),
+
+  % remove instance1
+  ok = wms_db_data_tasks:remove_task_instance(TaskName, TaskInstanceID1),
+  Expected4 = [],
+  Result4 = wms_db_data_tasks:get_task_instances(TaskName),
+  ?assertEqual(Expected4, Result4),
+
+  ?assertEqual([], mnesia:dirty_all_keys(?TASKS_TABLE_NAME)).
+
+%%--------------------------------------------------------------------
+%% Taskdef and Taskinstance tests
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+taskdef_task_test({info, _Config}) ->
+  [""];
+taskdef_task_test(suite) ->
+  ok;
+%% init test case
+taskdef_task_test({prelude, Config}) ->
+  ok = wms_db_data_tasks:create(),
+  ok = wms_db_data_taskdef:create(),
+  Config;
+%% destroy test case
+taskdef_task_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+taskdef_task_test(_Config) ->
+  TaskName1 = <<"tn1">>,
+  TaskID1 = <<"tn1_1">>,
+  TaskID2 = <<"tn1_2">>,
+
+  wms_db:add_taskdef(TaskName1, def1, auto),
+  wms_db:add_task_instance(TaskName1, TaskID1),
+  wms_db:add_task_instance(TaskName1, TaskID2),
+
+  TaskName2 = <<"tn2">>,
+  wms_db:add_taskdef(TaskName2, def2, manual),
+
+  Expected = [
+               {#taskdef{task_name  = TaskName2,
+                         definition = def2,
+                         type       = manual}, []},
+               {#taskdef{task_name  = TaskName1,
+                         definition = def1,
+                         type       = auto}, [TaskID2, TaskID1]}
+             ],
+  Result = wms_db:get_taskdef_instances(),
+  ?assertEqual(Expected, Result).
+
+%%--------------------------------------------------------------------
+%% Tests for task status
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+task_status_test({info, _Config}) ->
+  [""];
+task_status_test(suite) ->
+  ok;
+%% init test case
+task_status_test({prelude, Config}) ->
+  ok = wms_db_data_task_instance_status:create(),
+  Config;
+%% destroy test case
+task_status_test({postlude, _Config}) ->
+  ok;
+%% test case implementation
+task_status_test(_Config) ->
+  TaskInstanceID = <<"I1">>,
+  TaskName = <<"task1">>,
+  Status = wait,
+  Description = for_events,
+
+  ?assertEqual(not_found,
+               wms_db_data_task_instance_status:get_status(TaskInstanceID)),
+
+  % write first status record
+
+  ok = wms_db_data_task_instance_status:set_status(TaskInstanceID,
+                                                   TaskName,
+                                                   Status,
+                                                   Description),
+
+  Result1 =
+    wms_db_data_task_instance_status:get_status(TaskInstanceID),
+
+
+  ?assertEqual(TaskInstanceID, Result1#task_instance_status.task_instance),
+  ?assertEqual(TaskName, Result1#task_instance_status.task_name),
+  ?assertEqual(Status, Result1#task_instance_status.status),
+  ?assertEqual(Description, Result1#task_instance_status.description),
+  ?assertEqual(
+    [
+      {Result1#task_instance_status.timestamp,
+       undefined,
+       Status,
+       Description}
+    ],
+    Result1#task_instance_status.history),
+
+  % add new entry
+
+  Status1 = done,
+  Description1 = <<"end">>,
+
+  ok = wms_db_data_task_instance_status:set_status(TaskInstanceID,
+                                                   TaskName,
+                                                   Status1,
+                                                   Description1),
+
+  Result2 =
+    wms_db_data_task_instance_status:get_status(TaskInstanceID),
+
+  ?assertEqual(TaskInstanceID, Result2#task_instance_status.task_instance),
+  ?assertEqual(TaskName, Result2#task_instance_status.task_name),
+  ?assertEqual(Status1, Result2#task_instance_status.status),
+  ?assertEqual(Description1, Result2#task_instance_status.description),
+  ?assertEqual(
+    [
+      % second entry
+      {Result2#task_instance_status.timestamp,
+       undefined,
+       Status1,
+       Description1},
+
+      % first entry
+      {Result1#task_instance_status.timestamp,
+       Result2#task_instance_status.timestamp,
+       Status,
+       Description}
+    ],
+    Result2#task_instance_status.history),
+
+  ok.
+
 %% =============================================================================
 %% Private test functions
 %% =============================================================================

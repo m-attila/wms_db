@@ -36,9 +36,20 @@ new_event_test() ->
   Timestamp = wms_common:timestamp(),
   Instance = #{new_record :=NewRecord} = new_instance(Timestamp),
   Expected = #event{event_id   = ?EVENT_ID,
+                    mandatory  = false,
                     timestamps = [Timestamp]},
   Result = NewRecord(Instance, Timestamp),
-  ?assertEqual(Expected, Result).
+  ?assertEqual(Expected, Result),
+
+  Instance1 = #{new_record :=NewRecord} = wms_db_inst_events:new(
+    Timestamp,
+    {mandatory, ?EVENT_ID}),
+
+  Expected1 = #event{event_id   = ?EVENT_ID,
+                    mandatory  = true,
+                    timestamps = [Timestamp]},
+  Result1 = NewRecord(Instance1, Timestamp),
+  ?assertEqual(Expected1, Result1).
 
 add_timestamp_test() ->
   Timestamp = wms_common:timestamp(),

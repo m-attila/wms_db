@@ -11,7 +11,7 @@
   1},
  {<<"wms_dist">>,
   {git,"git@github.com:m-attila/wms_dist.git",
-       {ref,"eac37e8377bb008f473df4265e09a0c9a8a10b78"}},
+       {ref,"4a4294b94cb9c9963ee277fcbbcdb3553fd72b3c"}},
   0},
  {<<"wms_logger">>,
   {git,"git@github.com:m-attila/wms_logger.git",

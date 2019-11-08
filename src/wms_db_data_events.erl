@@ -112,7 +112,7 @@ remove_subscriber(Timestamp, EventID, TaskInstanceID) ->
 %%-------------------------------------------------------------------
 %%
 %% @end
--spec get_subscribers(timestamp(), binary()) ->
+-spec get_subscribers(timestamp() | dont_care, binary()) ->
   [{timestamp(), binary(), binary()}].
 get_subscribers(Timestamp, EventID) ->
   Instance = wms_db_inst_subscribers:new(Timestamp,

@@ -36,10 +36,19 @@ create_table() ->
     set,
     event, record_info(fields, event)).
 
--spec new(timestamp() | undefined, binary()) ->
+-spec new(timestamp() | undefined, binary() | {mandatory, binary()}) ->
   any().
-new(Timestamp, EventID) ->
+new(Timestamp, EventSpec) ->
+
+  {Mandatory, EventID} = case EventSpec of
+                           {mandatory, ID} ->
+                             {true, ID};
+                           OnlyEventID ->
+                             {false, OnlyEventID}
+                         end,
+
   Data = #{timestamp => Timestamp,
+           mandatory => Mandatory,
            event_id => EventID},
   #{
     fields => Data,
@@ -73,11 +82,14 @@ new_timestamp(#{fields := #{timestamp := Timestamp}}) ->
 
 -spec new_event(event_instance(), timestamp()) ->
   event().
-new_event(#{fields := #{event_id :=EventID}}, Timestamp) ->
+new_event(#{fields := #{event_id :=EventID,
+                        mandatory := Mandatory}}, Timestamp) ->
   #event{
     event_id   = EventID,
+    mandatory  = Mandatory,
     timestamps = [Timestamp]
   }.
+
 -spec add_timestamp(event_instance(), event(), timestamp()) ->
   event().
 add_timestamp(_, Record, Timestamp) ->

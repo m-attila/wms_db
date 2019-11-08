@@ -14,6 +14,7 @@
 
 -record(event, {
   event_id :: binary(),
+  mandatory :: boolean(),
   timestamps :: [timestamp()]
 }).
 -type event() :: #event{}.
