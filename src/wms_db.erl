@@ -34,7 +34,8 @@
          remove_private_state/1,
          load_private_state/1,
          set_task_instance_status/4,
-         get_task_instance_status/1]).
+         get_task_instance_status/1,
+         filter_global_variables/1]).
 
 %% =============================================================================
 %% API functions
@@ -93,6 +94,11 @@ get_subscribers(Timestamp, EventID) ->
   not_found | global_state_value().
 get_global_variable(VariableName) ->
   wms_db_data_global_state:get(VariableName).
+
+-spec filter_global_variables(binary()) ->
+  {ok, map()}.
+filter_global_variables(VariablePattern) ->
+  wms_db_data_global_state:filter(VariablePattern).
 
 -spec set_global_variable(global_state_value(), global_state_value()) ->
   ok.

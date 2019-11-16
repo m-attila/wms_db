@@ -10,6 +10,7 @@
 -author("Attila Makra").
 
 -include("wms_db.hrl").
+-include("wms_db_handler.hrl").
 
 -define(WAIT_FOR_INIT_TIMEOUT_MSEC, 5000).
 
@@ -24,7 +25,10 @@
          write_kv/3,
          delete/2,
          transaction/1,
-         delete_table/1, is_transaction/0, convert/1]).
+         delete_table/1,
+         is_transaction/0,
+         convert/1,
+         filter/2]).
 
 
 %% =============================================================================
@@ -32,10 +36,6 @@
 %% =============================================================================
 
 -type db_result(Res) :: {'atomic', Res} | {'aborted', Reason :: term()}.
--record(key_value_record, {
-  key :: term(),
-  value :: term()
-}).
 
 %% =============================================================================
 %% Functions
@@ -309,6 +309,14 @@ read(TableName, Key, LockingMode) ->
         end, ?WAIT_FOR_INIT_TIMEOUT_MSEC)
   end.
 
+-spec filter(atom(), filter_fun()) ->
+  {ok, map()}.
+filter(TableName, FilterAndTransformFun) ->
+  transaction(
+    fun() ->
+      filter(TableName, FilterAndTransformFun, #{})
+    end).
+
 %% @doc
 %%
 %%-------------------------------------------------------------------
@@ -464,3 +472,24 @@ unpack_mnesia_result({aborted, {Error, [_ | _]}}) ->
   {error, Error};
 unpack_mnesia_result({aborted, Error}) ->
   {error, Error}.
+
+-spec filter(atom(), filter_fun(), map()) ->
+  map().
+filter(TableName, FilterAndTransformFun, Accu) ->
+  filter(TableName, FilterAndTransformFun, Accu, mnesia:first(TableName)).
+
+-spec filter(atom(), filter_fun(), map(), term()) ->
+  map().
+filter(_TableName, _FilterAndTransformFun, Accu, '$end_of_table') ->
+  Accu;
+filter(TableName, FilterAndTransformFun, Accu, Key) ->
+  {ok, Records} = read(TableName, Key),
+  NewAccu =
+    case FilterAndTransformFun(Records) of
+      {true, Transformed} ->
+        Accu#{Key => Transformed};
+      false ->
+        Accu
+    end,
+
+  filter(TableName, FilterAndTransformFun, NewAccu, mnesia:next(TableName, Key)).

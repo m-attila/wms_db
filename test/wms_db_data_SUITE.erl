@@ -529,6 +529,29 @@ global_state_test(_Config) ->
                                                    AddFun, {global, Var2})),
   ?assertEqual(300 + 200, wms_db_data_global_state:get(Var3)),
 
+  % filtering - all variables
+  Expected = #{
+               <<"var1">> => 100,
+               <<"var2">> => 200,
+               <<"var3">> => 300 + 200
+             },
+  {ok, Result} = wms_db_data_global_state:filter(<<>>),
+  ?assertEqual(Expected, Result),
+
+  Expected1 = #{
+                <<"var1">> => 100,
+                <<"var2">> => 200,
+                <<"var3">> => 300 + 200
+              },
+  {ok, Result1} = wms_db_data_global_state:filter(<<"var">>),
+  ?assertEqual(Expected1, Result1),
+
+  Expected2 = #{
+                <<"var3">> => 300 + 200
+              },
+  {ok, Result2} = wms_db_data_global_state:filter(<<"var3">>),
+  ?assertEqual(Expected2, Result2),
+
   % remove var1
   ?assertEqual(ok, wms_db_data_global_state:remove(Var1)),
   ?assertEqual(not_found, wms_db_data_global_state:get(Var1)),

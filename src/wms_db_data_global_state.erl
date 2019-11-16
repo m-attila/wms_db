@@ -11,6 +11,7 @@
 
 -compile({no_auto_import, [get/1]}).
 
+-include("wms_db_handler.hrl").
 -include("wms_db_data_global_state.hrl").
 %% API
 -export([create/0,
@@ -18,7 +19,8 @@
          set/2,
          modify/3,
          modify/4,
-         remove/1]).
+         remove/1,
+         filter/1]).
 
 %% @doc
 %%
@@ -160,6 +162,26 @@ remove(Variable) ->
     end,
   wms_db_handler:transaction(Transaction).
 
+-spec filter(binary()) ->
+  {ok, map()}.
+filter(<<>>) ->
+  FilterFun =
+    fun([#key_value_record{value = Value}]) ->
+      {true, Value}
+    end,
+  do_filtering(FilterFun);
+filter(BeginOfVariableName) ->
+  FilterFun =
+    fun([#key_value_record{key   = Key,
+                          value = Value}]) ->
+      case binary:match(Key, BeginOfVariableName) of
+        {0, _} ->
+          {true, Value};
+        nomatch ->
+          false
+      end
+    end,
+  do_filtering(FilterFun).
 
 %% =============================================================================
 %% Private functions
@@ -169,3 +191,6 @@ remove(Variable) ->
   term().
 set_op(Value, _) ->
   Value.
+
+do_filtering(FilterFun) ->
+  wms_db_handler:filter(?TABLE_NAME, FilterFun).

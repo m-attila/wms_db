@@ -25,3 +25,6 @@
 -type global_state_operator() ::
 fun((global_state_value(),  global_state_value())->
   term()).
+
+-type filter_fun() :: fun(([term()]) ->
+  {true, term()} | false).

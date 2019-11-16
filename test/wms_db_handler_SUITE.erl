@@ -161,7 +161,8 @@ groups() ->
        init_test,
        create_delete_table_test,
        read_write_delete_test,
-       read_write_kv_test
+       read_write_kv_test,
+       filter_test
      ]
     }
   ].
@@ -386,6 +387,62 @@ read_write_kv_test(_Config) ->
   ?assertEqual({ok, [key1_value1]}, wms_db_handler:read_kv(tab1, key1)),
 
   ok.
+
+%%--------------------------------------------------------------------
+%% Test for filtering
+%%
+%%--------------------------------------------------------------------
+
+%% test case information
+filter_test({info, _Config}) ->
+  [""];
+filter_test(suite) ->
+  ok;
+%% init test case
+filter_test({prelude, Config}) ->
+  Config;
+%% destroy test case
+filter_test({postlude, _Config}) ->
+  delete_tables(),
+  ok;
+%% test case implementation
+filter_test(_Config) ->
+  ?assertEqual(ok, wms_db_handler_service:wait_for_initialized(3000)),
+
+  ok = wms_db_handler:create_table(tab1, set, ?TEST_RECORD,
+                                   record_info(fields, ?TEST_RECORD)),
+
+  % filtering people under 40
+  FilterFun =
+    fun([#testrec{age = Age}]) ->
+      case Age < 40 of
+        true ->
+          {true, #{age => Age}};
+        false ->
+          false
+      end
+    end,
+
+  % table is empty
+  ?assertEqual({ok, #{}},
+               wms_db_handler:filter(tab1, FilterFun)),
+
+  % write records to test table
+  ok = wms_db_handler:transaction(
+    fun() ->
+      [wms_db_handler:write(tab1, Rec) ||
+        Rec <- [#testrec{name = "Little John", age = 30},
+                #testrec{name = "Big Mary", age = 25},
+                #testrec{name = "Chuck Norris ", age = 55}]],
+      ok
+    end),
+
+% filtering people under 40
+  Expected = #{"Little John" => #{age => 30},
+               "Big Mary" => #{age => 25}},
+  ?assertEqual({ok, Expected},
+               wms_db_handler:filter(tab1, FilterFun)).
+
 
 %% =============================================================================
 %% Private test functions
