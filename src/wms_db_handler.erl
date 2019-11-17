@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @author Attila Makra
-%%% @copyright (C) 2019, OTP Bank Nyrt.
+%%% @copyright (C) 2019, Attila Makra.
 %%% @doc
 %%% Database handler module for Mnesia db.
 %%% @end
@@ -11,6 +11,7 @@
 
 -include("wms_db.hrl").
 -include("wms_db_handler.hrl").
+-include_lib("wms_logger/include/wms_logger.hrl").
 
 -define(WAIT_FOR_INIT_TIMEOUT_MSEC, 5000).
 
@@ -107,6 +108,7 @@ change_config(AllNodes, true) ->
     {ok, _} ->
       init_db();
     Other ->
+      ?error("DBS-0001", "Unable to add ~0p nodes to database", [AllNodes]),
       Other
   end.
 
@@ -120,6 +122,8 @@ init_db() ->
     {aborted, {already_exists, _, _, _}} ->
       ok;
     {aborted, Reason} ->
+      ?error("DBS-0002", "Unable to set database schema to 'disc_copies' mode:~0p",
+             [Reason]),
       {error, Reason}
   end.
 
@@ -216,6 +220,8 @@ add_table_copy_to_node(TableName) ->
     {aborted, {already_exists, TableName, Node}} ->
       ok;
     {aborted, Reason} ->
+      ?error("DBS-0003", "Unable to add ~s table to ~s node",
+             [TableName, Node]),
       {error, Reason}
   end.
 

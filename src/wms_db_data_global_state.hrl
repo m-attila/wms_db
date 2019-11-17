@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @author Attila Makra
-%%% @copyright (C) 2019, OTP Bank Nyrt.
+%%% @copyright (C) 2019, Attila Makra.
 %%% @doc
 %%% Header file for wms_db_data_global_state
 %%% @end

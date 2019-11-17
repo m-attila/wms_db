@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @author Attila Makra
-%%% @copyright (C) 2019, OTP Bank Nyrt.
+%%% @copyright (C) 2019, Attila Makra.
 %%% @doc
 %%% wms_db_handler initialized
 %%% @end
@@ -60,6 +60,7 @@ is_initialized() ->
 -spec run(fun(), integer()) ->
   term() | {error, database_unavailabe}.
 run(_, TimeoutMsec) when TimeoutMsec =< 0 ->
+  ?error("DBS-0004", "Database ~s", [unavailable]),
   {error, database_unavailabe};
 run(Fun, TimeoutMsec) ->
   case is_initialized() of
@@ -148,7 +149,8 @@ initializer(Phase, Args) ->
              Ret
            catch
              C:Reason ->
-               ?error("Phase initialization error: ~0p:~0p", [C, Reason]),
+               ?error("DBS-0005",
+                      "Phase initialization error: ~0p:~0p", [C, Reason]),
                {error, Reason}
            end,
   exit({ready, Phase, RetVal}).
@@ -173,6 +175,7 @@ do_table_creation([TableModule | Rest], Success) ->
     do_table_creation(Rest, [TableModule | Success])
   catch
     C:R ->
-      ?error("Error at ~s table creation : ~p : ~p", [TableModule, C, R]),
+      ?error("DBS-0006", "Error at ~s table creation : ~p : ~p",
+             [TableModule, C, R]),
       do_table_creation(Rest, Success)
   end.

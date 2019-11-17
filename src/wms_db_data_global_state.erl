@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @author Attila Makra
-%%% @copyright (C) 2019, OTP Bank Nyrt.
+%%% @copyright (C) 2019, Attila Makra.
 %%% @doc
 %%% DB storage for PrivateState
 %%% @end
@@ -192,5 +192,7 @@ filter(BeginOfVariableName) ->
 set_op(Value, _) ->
   Value.
 
+-spec do_filtering(filter_fun()) ->
+  {ok, map()}.
 do_filtering(FilterFun) ->
   wms_db_handler:filter(?TABLE_NAME, FilterFun).
